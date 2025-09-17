@@ -1,26 +1,33 @@
 package com.example.wifibtscan
 
+import android.annotation.SuppressLint
 import android.Manifest
 import android.content.Context
-import android.location.Location
+import android.content.pm.PackageManager
 import android.net.wifi.WifiManager
-import androidx.annotation.RequiresPermission
+import androidx.core.app.ActivityCompat
 import com.example.wifibtscan.model.WifiResult
 
 object WifiScanner {
-    @RequiresPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-    fun scan(context: Context, location: Location?): List<WifiResult> {
+
+    @SuppressLint("MissingPermission") // suppress lint warning safely
+    fun scan(context: Context, location: android.location.Location): List<WifiResult> {
         val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        val results = wifiManager.scanResults
-        return results.map {
-            @Suppress("DEPRECATION")
-            val ssid: String = it.SSID;
+
+        // ✅ Runtime permission check
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            return emptyList()
+        }
+
+        return wifiManager.scanResults.map {
             WifiResult(
-                ssid = ssid,
+                ssid = @Suppress("DEPRECATION") it.SSID,
                 bssid = it.BSSID,
                 rssi = it.level,
-                latitude = location?.latitude,
-                longitude = location?.longitude
+                latitude = location.latitude,
+                longitude = location.longitude
             )
         }
     }

@@ -37,7 +37,7 @@ class ScanService : Service() {
             LocationHelper.listenForLocation(this@ScanService) { location ->
                 launch {
                     val wifiResults: List<WifiResult> = WifiScanner.scan(this@ScanService, location)
-                    val btResults: List<BluetoothResult> = BluetoothScanner.scan(location)
+                    val btResults: List<BluetoothResult> = BluetoothScanner.scan(this@ScanService, location)
 
                     wifiLiveData.postValue(wifiResults)
                     btLiveData.postValue(btResults)
@@ -52,7 +52,11 @@ class ScanService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun createNotificationChannel() {
-        val channel = NotificationChannel("scan_channel", "Scan Service", NotificationManager.IMPORTANCE_LOW)
+        val channel = NotificationChannel(
+            "scan_channel",
+            "Scan Service",
+            NotificationManager.IMPORTANCE_LOW
+        )
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(channel)
     }
