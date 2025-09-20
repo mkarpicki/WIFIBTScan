@@ -10,7 +10,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
-import androidx.lifecycle.Observer
 
 class MainActivity : ComponentActivity() {
 
@@ -19,18 +18,10 @@ class MainActivity : ComponentActivity() {
     private lateinit var wifiAdapter: ArrayAdapter<String>
     private lateinit var btAdapter: ArrayAdapter<String>
 
-//    private val requestPermissions =
-//        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { perms ->
-//            val granted = perms.values.all { it }
-//            if (granted) {
-//                startForegroundService(Intent(this, ScanService::class.java))
-//            }
-//        }
-
-    private val permissions = arrayOf(
+    // Step 1: Foreground permissions
+    private val foregroundPermissions = arrayOf(
         Manifest.permission.ACCESS_FINE_LOCATION,
         Manifest.permission.ACCESS_COARSE_LOCATION,
-        Manifest.permission.ACCESS_BACKGROUND_LOCATION,
         Manifest.permission.BLUETOOTH_SCAN,
         Manifest.permission.BLUETOOTH_CONNECT,
         Manifest.permission.ACCESS_WIFI_STATE,
@@ -38,29 +29,28 @@ class MainActivity : ComponentActivity() {
         Manifest.permission.INTERNET
     )
 
-    private val requestPermissions =
+    // Step 2: Background location
+    private val backgroundPermission = Manifest.permission.ACCESS_BACKGROUND_LOCATION
+
+    private val requestForegroundPermissions =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { perms ->
             val granted = perms.values.all { it }
             if (granted) {
-                startForegroundService(Intent(this, ScanService::class.java))
+                // Foreground location granted → now request background location
+                requestBackgroundPermission.launch(backgroundPermission)
             } else {
-                Toast.makeText(this, "Permissions required!", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Foreground permissions required!", Toast.LENGTH_LONG).show()
             }
         }
 
-    private fun checkAndRequestPermissions() {
-        val missing = permissions.filter {
-            ActivityCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+    private val requestBackgroundPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) {
+                startForegroundService(Intent(this, ScanService::class.java))
+            } else {
+                Toast.makeText(this, "Background location required!", Toast.LENGTH_LONG).show()
+            }
         }
-
-        if (missing.isEmpty()) {
-            // ✅ Already granted
-            startForegroundService(Intent(this, ScanService::class.java))
-        } else {
-            // ✅ Explicitly request missing ones
-            requestPermissions.launch(missing.toTypedArray())
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -75,37 +65,42 @@ class MainActivity : ComponentActivity() {
         wifiListView.adapter = wifiAdapter
         btListView.adapter = btAdapter
 
-        // Observe LiveData from service
-        ScanService.wifiLiveData.observe(this, Observer { results ->
+        ScanService.wifiLiveData.observe(this) { results ->
             wifiAdapter.clear()
             wifiAdapter.addAll(results.map { "${it.ssid} (${it.rssi} dBm)" })
             wifiAdapter.notifyDataSetChanged()
-        })
+        }
 
-        ScanService.btLiveData.observe(this, Observer { results ->
+        ScanService.btLiveData.observe(this) { results ->
             btAdapter.clear()
             btAdapter.addAll(results.map { "${it.name ?: "Unknown"} (${it.rssi} dBm)" })
             btAdapter.notifyDataSetChanged()
-        })
+        }
 
-//        val permissions = arrayOf(
-//            Manifest.permission.ACCESS_FINE_LOCATION,
-//            Manifest.permission.ACCESS_COARSE_LOCATION,
-//            Manifest.permission.ACCESS_BACKGROUND_LOCATION,
-//            Manifest.permission.BLUETOOTH_SCAN,
-//            Manifest.permission.BLUETOOTH_CONNECT,
-//            Manifest.permission.ACCESS_WIFI_STATE,
-//            Manifest.permission.CHANGE_WIFI_STATE,
-//            Manifest.permission.INTERNET
-//        )
-//
-//        if (permissions.all {
-//                ActivityCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
-//            }) {
-//            startForegroundService(Intent(this, ScanService::class.java))
-//        } else {
-//            requestPermissions.launch(permissions)
-//        }
         checkAndRequestPermissions()
+    }
+
+    private fun checkAndRequestPermissions() {
+        val missingForeground = foregroundPermissions.filter {
+            ActivityCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+
+        val backgroundGranted =
+            ActivityCompat.checkSelfPermission(this, backgroundPermission) == PackageManager.PERMISSION_GRANTED
+
+        when {
+            missingForeground.isNotEmpty() -> {
+                // Step 1: request foreground permissions
+                requestForegroundPermissions.launch(missingForeground.toTypedArray())
+            }
+            !backgroundGranted -> {
+                // Step 2: request background location
+                requestBackgroundPermission.launch(backgroundPermission)
+            }
+            else -> {
+                // All granted
+                startForegroundService(Intent(this, ScanService::class.java))
+            }
+        }
     }
 }
