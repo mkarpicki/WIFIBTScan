@@ -11,6 +11,9 @@ import kotlinx.coroutines.launch
 object LocationHelper {
     private var fusedLocationClient: FusedLocationProviderClient? = null
 
+    private var checkForPositionUpdate = 10000L; //10s
+    private var numberOfMetersToReact = 0.5f; //30f
+
     @SuppressLint("MissingPermission")
     fun listenForLocation(context: Context, onUpdate: (android.location.Location) -> Unit) {
         if (fusedLocationClient == null) {
@@ -18,8 +21,8 @@ object LocationHelper {
         }
 
         val request = LocationRequest.Builder(
-            Priority.PRIORITY_HIGH_ACCURACY, 10000L // every 10s
-        ).setMinUpdateDistanceMeters(30f) // retrigger if moved > 30m
+            Priority.PRIORITY_HIGH_ACCURACY, checkForPositionUpdate // every 10s
+        ).setMinUpdateDistanceMeters(numberOfMetersToReact) // retrigger if moved > 30m
             .build()
 
         val callback = object : LocationCallback() {
