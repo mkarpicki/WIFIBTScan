@@ -1,38 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
+    android:id="@+id/rootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    android:orientation="vertical"
+    android:padding="8dp">
 
+    <!-- Wi-Fi results list -->
     <TextView
+        android:id="@+id/wifiLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Wi-Fi Networks"
-        android:textStyle="bold"
         android:textSize="18sp"
-        android:paddingBottom="8dp"/>
+        android:textStyle="bold"
+        android:paddingBottom="4dp" />
 
     <ListView
         android:id="@+id/wifiListView"
         android:layout_width="match_parent"
-        android:layout_height="150dp"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:divider="@android:color/darker_gray"
         android:dividerHeight="1dp" />
 
+    <!-- Bluetooth results list -->
     <TextView
+        android:id="@+id/btLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Bluetooth Devices"
-        android:textStyle="bold"
         android:textSize="18sp"
-        android:paddingTop="16dp"
-        android:paddingBottom="8dp"/>
+        android:textStyle="bold"
+        android:paddingTop="8dp"
+        android:paddingBottom="4dp" />
 
     <ListView
         android:id="@+id/btListView"
         android:layout_width="match_parent"
-        android:layout_height="150dp"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:divider="@android:color/darker_gray"
         android:dividerHeight="1dp" />
+
 </LinearLayout>

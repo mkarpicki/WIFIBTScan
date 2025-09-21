@@ -2,41 +2,36 @@ package com.example.wifibtscan
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.os.Looper
-import com.google.android.gms.location.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import android.location.Location
+import android.util.Log
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
+import kotlinx.coroutines.tasks.await
 
 object LocationHelper {
-    private var fusedLocationClient: FusedLocationProviderClient? = null
 
-    private var checkForPositionUpdate = 10000L; //10s
-    private var numberOfMetersToReact = 0.5f; //30f
+    private const val TAG = "LocationHelper"
 
+    /**
+     * Returns the last known location as a suspend function.
+     * Returns null if location is unavailable or permission is missing.
+     */
     @SuppressLint("MissingPermission")
-    fun listenForLocation(context: Context, onUpdate: (android.location.Location) -> Unit) {
-        if (fusedLocationClient == null) {
-            fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
-        }
+    suspend fun getLastLocation(context: Context): Location? {
+        return try {
+            val fusedClient: FusedLocationProviderClient =
+                LocationServices.getFusedLocationProviderClient(context)
 
-        val request = LocationRequest.Builder(
-            Priority.PRIORITY_HIGH_ACCURACY, checkForPositionUpdate // every 10s
-        ).setMinUpdateDistanceMeters(numberOfMetersToReact) // retrigger if moved > 30m
-            .build()
-
-        val callback = object : LocationCallback() {
-            override fun onLocationResult(locationResult: LocationResult) {
-                CoroutineScope(Dispatchers.Default).launch {
-                    locationResult.locations.lastOrNull()?.let { onUpdate(it) }
-                }
+            val location = fusedClient.lastLocation.await()
+            if (location != null) {
+                Log.d(TAG, "Last location: ${location.latitude}, ${location.longitude}")
+            } else {
+                Log.d(TAG, "No last location available")
             }
+            location
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get last location", e)
+            null
         }
-
-        fusedLocationClient?.requestLocationUpdates(
-            request,
-            callback,
-            Looper.getMainLooper()
-        )
     }
 }
