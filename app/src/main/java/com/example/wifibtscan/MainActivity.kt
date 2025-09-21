@@ -132,7 +132,7 @@ class MainActivity : AppCompatActivity() {
         ScanService.btLiveData.observe(this) { results ->
             Log.d(TAG, "Updating UI with ${results.size} BT results")
             btAdapter.clear()
-            btAdapter.addAll(results.map { "${it.name ?: "Unknown"} (${it.rssi} dBm)" })
+            btAdapter.addAll(results.map { "${it.name} (${it.rssi} dBm)" })
             btAdapter.notifyDataSetChanged()
         }
     }

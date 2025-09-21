@@ -9,9 +9,10 @@ import android.os.IBinder
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.core.app.NotificationCompat
-import kotlinx.coroutines.*
+import androidx.core.content.ContextCompat
 import com.example.wifibtscan.model.WifiResult
 import com.example.wifibtscan.model.BluetoothResult
+import kotlinx.coroutines.*
 
 class ScanService : Service() {
 
@@ -52,12 +53,12 @@ class ScanService : Service() {
                             // Wi-Fi scan
                             val wifiResults = WifiScanner.scan(applicationContext, it)
                             Log.d(TAG, "Wi-Fi scan returned: ${wifiResults.size}")
-                            wifiLiveData.postValue(wifiResults)
+                            wifiLiveData.postValue(wifiResults) // ✅ postValue ensures UI updates
 
                             // Bluetooth scan
                             val btResults = BluetoothScanner.scan(applicationContext, it)
                             Log.d(TAG, "Bluetooth scan returned: ${btResults.size}")
-                            btLiveData.postValue(btResults)
+                            btLiveData.postValue(btResults) // ✅ postValue ensures UI updates
                         }
                     } catch (t: Throwable) {
                         Log.e(TAG, "Scan error", t)
