@@ -9,7 +9,6 @@ import android.os.IBinder
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
 import com.example.wifibtscan.model.WifiResult
 import com.example.wifibtscan.model.BluetoothResult
 import kotlinx.coroutines.*
@@ -20,9 +19,13 @@ class ScanService : Service() {
         val wifiLiveData = MutableLiveData<List<WifiResult>>()
         val btLiveData = MutableLiveData<List<BluetoothResult>>()
         private const val TAG = "ScanService"
+
+        private const val THRESHOLD_METERS = 2f // 20f // scan only if device moves >= 20 meters
+        private const val DELAY_MILIS = 5000
     }
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var lastLocation: android.location.Location? = null
     private var isScanning = false
 
     override fun onCreate() {
@@ -30,7 +33,7 @@ class ScanService : Service() {
         Log.d(TAG, "onCreate()")
         createNotificationChannel()
         startForeground(1, buildNotification())
-        startPeriodicScan()
+        startDistanceBasedScanLoop()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -40,37 +43,51 @@ class ScanService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun startPeriodicScan() {
+    // -------------------- Distance-based scanning --------------------
+    private fun startDistanceBasedScanLoop() {
         scope.launch {
             while (isActive) {
-                if (!isScanning) {
-                    isScanning = true
-                    try {
-                        val location = LocationHelper.getLastLocation(applicationContext)
-                        location?.let {
-                            Log.d(TAG, "📍 Location: ${it.latitude}, ${it.longitude}")
-
-                            // Wi-Fi scan
-                            val wifiResults = WifiScanner.scan(applicationContext, it)
-                            Log.d(TAG, "Wi-Fi scan returned: ${wifiResults.size}")
-                            wifiLiveData.postValue(wifiResults) // ✅ postValue ensures UI updates
-
-                            // Bluetooth scan
-                            val btResults = BluetoothScanner.scan(applicationContext, it)
-                            Log.d(TAG, "Bluetooth scan returned: ${btResults.size}")
-                            btLiveData.postValue(btResults) // ✅ postValue ensures UI updates
+                try {
+                    val currentLocation = LocationHelper.getLastLocation(applicationContext)
+                    currentLocation?.let { location ->
+                        val shouldScan = lastLocation == null ||
+                                lastLocation!!.distanceTo(location) >= THRESHOLD_METERS
+                        if (shouldScan && !isScanning) {
+                            lastLocation = location
+                            performScan(location)
                         }
-                    } catch (t: Throwable) {
-                        Log.e(TAG, "Scan error", t)
-                    } finally {
-                        isScanning = false
                     }
+                } catch (t: Throwable) {
+                    Log.e(TAG, "Scan loop error", t)
                 }
-                delay(15000) // repeat every 15 seconds
+                delay(DELAY_MILIS.toLong()) // check location every 5 seconds
             }
         }
     }
 
+    private suspend fun performScan(location: android.location.Location) {
+        isScanning = true
+        try {
+            Log.d(TAG, "📍 Scanning at location: ${location.latitude}, ${location.longitude}")
+
+            // Wi-Fi scan
+            val wifiResults: List<WifiResult> = WifiScanner.scan(applicationContext, location)
+            Log.d(TAG, "Wi-Fi scan returned: ${wifiResults.size}")
+            wifiLiveData.postValue(wifiResults)
+
+            // Bluetooth scan
+            val btResults: List<BluetoothResult> = BluetoothScanner.scan(applicationContext, location)
+            Log.d(TAG, "Bluetooth scan returned: ${btResults.size}")
+            btLiveData.postValue(btResults)
+
+        } catch (t: Throwable) {
+            Log.e(TAG, "Scan error", t)
+        } finally {
+            isScanning = false
+        }
+    }
+
+    // -------------------- Notification --------------------
     private fun createNotificationChannel() {
         val channel = NotificationChannel("scan_channel", "Scan Service", NotificationManager.IMPORTANCE_LOW)
         val manager = getSystemService(NotificationManager::class.java)
