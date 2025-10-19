@@ -20,7 +20,7 @@ class ScanService : Service() {
         val btLiveData = MutableLiveData<List<BluetoothResult>>()
         private const val TAG = "ScanService"
 
-        private const val THRESHOLD_METERS = 2f // 20f // scan only if device moves >= 20 meters
+        private const val THRESHOLD_METERS = 1f // 20f // scan only if device moves >= 20 meters
         private const val DELAY_MILIS = 5000
     }
 
