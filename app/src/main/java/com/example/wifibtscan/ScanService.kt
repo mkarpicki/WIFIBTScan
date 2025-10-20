@@ -70,6 +70,9 @@ class ScanService : Service() {
         try {
             Log.d(TAG, "📍 Scanning at location: ${location.latitude}, ${location.longitude}")
 
+            wifiLiveData.postValue(emptyList())
+            btLiveData.postValue(emptyList())
+
             // Wi-Fi scan
             val wifiResults: List<WifiResult> = WifiScanner.scan(applicationContext, location)
             Log.d(TAG, "Wi-Fi scan returned: ${wifiResults.size}")
