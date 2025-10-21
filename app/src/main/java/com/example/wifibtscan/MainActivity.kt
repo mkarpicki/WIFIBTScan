@@ -125,14 +125,23 @@ class MainActivity : AppCompatActivity() {
         ScanService.wifiLiveData.observe(this) { results ->
             Log.d(TAG, "Updating UI with ${results.size} Wi-Fi results")
             wifiAdapter.clear()
-            wifiAdapter.addAll(results.map { "${it.ssid} (${it.rssi} dBm)" })
+            if (results.isEmpty()) {
+                // show user-friendly message while scanning
+                wifiAdapter.add("Searching Wi-Fi networks…")
+            } else {
+                wifiAdapter.addAll(results.map { "${it.ssid} (${it.rssi} dBm)" })
+            }
             wifiAdapter.notifyDataSetChanged()
         }
 
         ScanService.btLiveData.observe(this) { results ->
             Log.d(TAG, "Updating UI with ${results.size} BT results")
             btAdapter.clear()
-            btAdapter.addAll(results.map { "${it.name} (${it.rssi} dBm)" })
+            if (results.isEmpty()) {
+                btAdapter.add("Searching Bluetooth devices…")
+            } else {
+                btAdapter.addAll(results.map { "${it.name} (${it.address})" })
+            }
             btAdapter.notifyDataSetChanged()
         }
     }
