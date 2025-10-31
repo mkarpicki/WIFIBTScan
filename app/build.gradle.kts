@@ -15,6 +15,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField "String", "THINGSPEAK_WIFI_API_KEY", "\"${getLocalProperty("THINGSPEAK_WIFI_API_KEY")}\""
+        buildConfigField "String", "THINGSPEAK_BT_API_KEY", "\"${getLocalProperty("THINGSPEAK_BT_API_KEY")}\""
     }
 
     buildTypes {
@@ -55,6 +58,7 @@ dependencies {
 
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation("com.squareup.retrofit2:converter-scalars:2.11.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
