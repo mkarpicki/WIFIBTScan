@@ -18,6 +18,7 @@ import com.example.wifibtscan.network.WifiThingSpeakApi
 import kotlinx.coroutines.*
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.wifibtscan.BuildConfig
 
 class ScanService : Service() {
 
@@ -27,8 +28,10 @@ class ScanService : Service() {
 
         // Replace placeholders with your actual ThingSpeak write keys,
         // or switch to BuildConfig.* if you inject keys via Gradle.
-        private const val WIFI_API_KEY = "aaa"
-        private const val BT_API_KEY = "bbb"
+
+        val WIFI_API_KEY = BuildConfig.THINGSPEAK_WIFI_API_KEY
+        val BT_API_KEY = BuildConfig.THINGSPEAK_BT_API_KEY
+
 
         private const val TAG = "ScanService"
         private const val CHANNEL_ID = "scan_channel"
