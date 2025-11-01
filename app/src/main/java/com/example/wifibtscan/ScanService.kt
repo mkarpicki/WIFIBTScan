@@ -81,6 +81,9 @@ class ScanService : Service() {
         }
     }
 
+    /** Returns current Unix timestamp in milliseconds since 1970-01-01 UTC */
+    private fun currentTimestampMillis(): String = Date().time.toString()
+
     private suspend fun performScan(location: android.location.Location) {
         if (isScanning) {
             Log.d(TAG, "Already scanning — skipping this iteration")
@@ -103,7 +106,8 @@ class ScanService : Service() {
             btLiveData.postValue(btResults)
 
             // Prepare timestamp string for ThingSpeak field4
-            val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+            //val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+            val timestamp = currentTimestampMillis()
             val lat = location.latitude
             val lon = location.longitude
 
