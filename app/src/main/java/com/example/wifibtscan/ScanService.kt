@@ -53,8 +53,15 @@ class ScanService : Service() {
         super.onCreate()
         createNotificationChannel()
         startForeground(1, buildNotification("Scanning Wi-Fi & Bluetooth"))
-        startScanLoop()
+
+        // Fetch filter list once, then start scan loop
+        svcScope.launch {
+            FilterManager.initOnce()
+            Log.d(TAG, "Filter initialized: size=${FilterManager.getFilteredCopy().size}")
+            startScanLoop() // call loop after filter list loaded
+        }
     }
+
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "onStartCommand startId=$startId")
@@ -99,11 +106,17 @@ class ScanService : Service() {
             btLiveData.postValue(emptyList<BluetoothResult>())
 
             // Run scans (these are suspend functions in your scanners)
-            val wifiResults = WifiScanner.scan(applicationContext, location)
-            wifiLiveData.postValue(wifiResults)
+            val rawWifiResults = WifiScanner.scan(applicationContext, location)
+            val rawBtResults = BluetoothScanner.scan(applicationContext, location)
 
-            val btResults = BluetoothScanner.scan(applicationContext, location)
+            // Filter out entries whose bssid/address is in FilterManager
+            val wifiResults = rawWifiResults.filter { !FilterManager.isFiltered(it.bssid) }
+            val btResults = rawBtResults.filter { !FilterManager.isFiltered(it.address) }
+
+            // Post filtered lists to UI
+            wifiLiveData.postValue(wifiResults)
             btLiveData.postValue(btResults)
+
 
             // Prepare timestamp string for ThingSpeak field4
             //val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())

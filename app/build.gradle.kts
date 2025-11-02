@@ -33,6 +33,9 @@ android {
 
         buildConfigField("String", "THINGSPEAK_WIFI_API_KEY", "\"${getSecret("THINGSPEAK_WIFI_API_KEY")}\"")
         buildConfigField("String", "THINGSPEAK_BT_API_KEY", "\"${getSecret("THINGSPEAK_BT_API_KEY")}\"")
+
+        buildConfigField("String", "FILTER_API_URL", "\"${getSecret("FILTER_API_URL")}\"")
+        buildConfigField("String", "FILTER_API_KEY", "\"${getSecret("FILTER_API_KEY")}\"")
     }
     buildFeatures {
         buildConfig = true
