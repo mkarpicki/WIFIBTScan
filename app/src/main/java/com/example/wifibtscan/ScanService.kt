@@ -16,9 +16,9 @@ import com.example.wifibtscan.network.BtThingSpeakApi
 import com.example.wifibtscan.network.ThingSpeakApiClients
 import com.example.wifibtscan.network.WifiThingSpeakApi
 import kotlinx.coroutines.*
+import java.util.Date
+import java.util.Locale
 import java.text.SimpleDateFormat
-import java.util.*
-import com.example.wifibtscan.BuildConfig
 
 class ScanService : Service() {
 
@@ -26,22 +26,25 @@ class ScanService : Service() {
         val wifiLiveData = MutableLiveData<List<WifiResult>>()
         val btLiveData = MutableLiveData<List<BluetoothResult>>()
 
-        // Replace placeholders with your actual ThingSpeak write keys,
-        // or switch to BuildConfig.* if you inject keys via Gradle.
+        // Change this constant to adjust the distance threshold (meters)
+        private const val DISTANCE_THRESHOLD_METERS = 20f
 
-        val WIFI_API_KEY = BuildConfig.THINGSPEAK_WIFI_API_KEY
-        val BT_API_KEY = BuildConfig.THINGSPEAK_BT_API_KEY
+        // How often we check location for movement (ms)
+        private const val CHECK_INTERVAL_MS = 10_000L
 
+        // ThingSpeak keys (injected via BuildConfig)
+        private val WIFI_API_KEY: String = BuildConfig.THINGSPEAK_WIFI_API_KEY
+        private val BT_API_KEY: String = BuildConfig.THINGSPEAK_BT_API_KEY
 
         private const val TAG = "ScanService"
         private const val CHANNEL_ID = "scan_channel"
-        private const val CHANNEL_NAME = "Scanning Service"
+        private const val CHANNEL_NAME = "WiFi+BT Scanning"
     }
 
     private val svcScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var isScanning = false
 
-    // Retrofit API instances (created from ThingSpeakApiClients)
+    // Retrofit API instances
     private val wifiApi: WifiThingSpeakApi by lazy {
         ThingSpeakApiClients.wifiClient.create(WifiThingSpeakApi::class.java)
     }
@@ -49,19 +52,26 @@ class ScanService : Service() {
         ThingSpeakApiClients.btClient.create(BtThingSpeakApi::class.java)
     }
 
+    // Last location where we performed a scan (null until first scan)
+    private var lastScanLocation: android.location.Location? = null
+
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        startForeground(1, buildNotification("Scanning Wi-Fi & Bluetooth"))
+        startForeground(1, buildNotification("Wi-Fi & BT scanner running"))
 
-        // Fetch filter list once, then start scan loop
+        // Initialize filter list once, then start distance-based loop
         svcScope.launch {
-            FilterManager.initOnce()
-            Log.d(TAG, "Filter initialized: size=${FilterManager.getFilteredCopy().size}")
-            startScanLoop() // call loop after filter list loaded
+            try {
+                FilterManager.initOnce()
+                Log.d(TAG, "Filter initialized, entries=${FilterManager.getFilteredCopy().size}")
+            } catch (t: Throwable) {
+                Log.e(TAG, "Filter init error", t)
+            }
+
+            startDistanceBasedScanLoop()
         }
     }
-
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "onStartCommand startId=$startId")
@@ -70,30 +80,37 @@ class ScanService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun startScanLoop() {
+    private fun startDistanceBasedScanLoop() {
         svcScope.launch {
             while (isActive) {
                 try {
-                    val location = LocationHelper.getLastLocation(applicationContext)
-                    if (location != null) {
-                        performScan(location)
+                    // getLastLocation is a suspend function in your LocationHelper
+                    val current = LocationHelper.getLastLocation(applicationContext)
+                    if (current != null) {
+                        val shouldScan = lastScanLocation == null ||
+                                lastScanLocation!!.distanceTo(current) >= DISTANCE_THRESHOLD_METERS
+
+                        if (shouldScan) {
+                            // store current as "last" before scanning to avoid race conditions
+                            lastScanLocation = current
+                            performScan(current)
+                        } else {
+                            Log.d(TAG, "Not moved enough: need $DISTANCE_THRESHOLD_METERS m (moved ${lastScanLocation?.distanceTo(current) ?: 0f})")
+                        }
                     } else {
-                        Log.d(TAG, "No location available, skipping scan")
+                        Log.d(TAG, "Current location is null — will retry")
                     }
                 } catch (t: Throwable) {
-                    Log.e(TAG, "Scan loop exception", t)
+                    Log.e(TAG, "Distance loop error", t)
                 }
-                delay(10_000) // 10 seconds between scan attempts (adjustable)
+                delay(CHECK_INTERVAL_MS)
             }
         }
     }
 
-    /** Returns current Unix timestamp in milliseconds since 1970-01-01 UTC */
-    private fun currentTimestampMillis(): String = Date().time.toString()
-
     private suspend fun performScan(location: android.location.Location) {
         if (isScanning) {
-            Log.d(TAG, "Already scanning — skipping this iteration")
+            Log.d(TAG, "performScan skipped: already scanning")
             return
         }
 
@@ -101,30 +118,39 @@ class ScanService : Service() {
         try {
             Log.d(TAG, "📍 performScan at ${location.latitude}, ${location.longitude}")
 
-            // Indicate refresh to UI by posting empty lists
+            // Indicate UI refresh by posting typed empty lists
             wifiLiveData.postValue(emptyList<WifiResult>())
             btLiveData.postValue(emptyList<BluetoothResult>())
 
-            // Run scans (these are suspend functions in your scanners)
-            val rawWifiResults = WifiScanner.scan(applicationContext, location)
-            val rawBtResults = BluetoothScanner.scan(applicationContext, location)
+            // Run scans (your WifiScanner / BluetoothScanner are suspend functions)
+            val rawWifi = try {
+                WifiScanner.scan(applicationContext, location)
+            } catch (t: Throwable) {
+                Log.e(TAG, "WifiScanner.scan failed", t)
+                emptyList<WifiResult>()
+            }
 
-            // Filter out entries whose bssid/address is in FilterManager
-            val wifiResults = rawWifiResults.filter { !FilterManager.isFiltered(it.bssid) }
-            val btResults = rawBtResults.filter { !FilterManager.isFiltered(it.address) }
+            val rawBt = try {
+                BluetoothScanner.scan(applicationContext, location)
+            } catch (t: Throwable) {
+                Log.e(TAG, "BluetoothScanner.scan failed", t)
+                emptyList<BluetoothResult>()
+            }
+
+            // Filter out addresses present in the FilterManager
+            val wifiResults = rawWifi.filter { wifi -> !FilterManager.isFiltered(wifi.bssid) }
+            val btResults = rawBt.filter { bt -> !FilterManager.isFiltered(bt.address) }
 
             // Post filtered lists to UI
             wifiLiveData.postValue(wifiResults)
             btLiveData.postValue(btResults)
 
-
-            // Prepare timestamp string for ThingSpeak field4
-            //val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
-            val timestamp = currentTimestampMillis()
+            // Prepare timestamp (milliseconds since epoch)
+            val timestampMillis = Date().time.toString()
             val lat = location.latitude
             val lon = location.longitude
 
-            // Send to ThingSpeak, one POST per device, respecting rate limits
+            // Send each device to ThingSpeak (1s delay between posts)
             withContext(Dispatchers.IO) {
                 // Wi-Fi devices
                 for (wifi in wifiResults) {
@@ -134,7 +160,7 @@ class ScanService : Service() {
                             wifi.ssid ?: "",
                             wifi.bssid ?: "",
                             wifi.rssi,
-                            timestamp,
+                            timestampMillis,
                             lat,
                             lon
                         )
@@ -143,7 +169,7 @@ class ScanService : Service() {
                     } catch (e: Exception) {
                         Log.e(TAG, "Failed to send Wi-Fi ${wifi.ssid}", e)
                     }
-                    delay(1000) // 1s delay to be polite / avoid rate limits
+                    delay(1000)
                 }
 
                 // Bluetooth devices
@@ -154,7 +180,7 @@ class ScanService : Service() {
                             bt.name ?: "Unknown",
                             bt.address ?: "Unknown",
                             bt.rssi ?: 0,
-                            timestamp,
+                            timestampMillis,
                             lat,
                             lon
                         )
@@ -174,7 +200,7 @@ class ScanService : Service() {
         }
     }
 
-    // --- Notification helpers (inline, no external class required) ---
+    // --- Notification helpers ---
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(NotificationManager::class.java)
@@ -191,7 +217,6 @@ class ScanService : Service() {
             .setSmallIcon(android.R.drawable.ic_menu_search)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
-
         return builder.build()
     }
 
