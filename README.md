@@ -184,30 +184,34 @@ api_key=ABCDEFG1234567
 ---
 
 <a id="business-logic-diagram"></a>
-
 ## 🧭 Business Logic Diagram
 
 ```mermaid
 flowchart TD
-  A[App start] --> B[Load secrets.properties]
-  B --> C[Start ScanService (foreground)]
-  C --> D[GET filter list (x-api-key)]
-  D --> E{List loaded?}
-  E -->|Yes| F[Start loop every 10 s]
-  E -->|No| F
-  F --> G[Get last location]
-  G --> H{Moved ≥ 20 m?}
-  H -->|No| F
-  H -->|Yes| I[Perform scan]
-  I --> J[Clear UI → "Searching…"]
-  I --> K[Scan Wi-Fi]
-  I --> L[Scan Bluetooth]
-  K --> M1[Filter Wi-Fi (bssid)]
-  L --> M2[Filter BT (address)]
-  M1 & M2 --> N[Update UI]
-  N --> O[POST Wi-Fi → ThingSpeak (delay 1 s)]
-  N --> P[POST BT → ThingSpeak (delay 1 s)]
-  O & P --> Q[Wait next loop]
+
+    A[App start] --> B[Load secrets.properties]
+    B --> C[Start ScanService (foreground)]
+    C --> D[GET filter list (x-api-key)]
+    D --> E{List loaded?}
+    E -->|Yes| F[Start loop every 10 s]
+    E -->|No| F[Start loop every 10 s]
+    F --> G[Get last location]
+    G --> H{Moved ≥ 20 m?}
+    H -->|No| F
+    H -->|Yes| I[Perform scan]
+    I --> J[Clear UI → "Searching…"]
+    J --> K[Scan Wi-Fi]
+    J --> L[Scan Bluetooth]
+    K --> M1[Filter Wi-Fi (bssid)]
+    L --> M2[Filter BT (address)]
+    M1 --> N[Update UI]
+    M2 --> N
+    N --> O[POST Wi-Fi → ThingSpeak (delay 1 s)]
+    N --> P[POST BT → ThingSpeak (delay 1 s)]
+    O --> Q[Wait next loop]
+    P --> Q
+    Q --> F
+
 ```
 
 ---
@@ -220,4 +224,5 @@ Ensure compliance with local laws governing radio scanning.
 ---
 
 **Author:** ChatGPT (GPT-5) + *Mariusz*
+
 **Last Updated:** 2025-11-05
