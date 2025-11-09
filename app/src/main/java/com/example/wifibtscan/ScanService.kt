@@ -1,11 +1,11 @@
 package com.example.wifibtscan
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
-import android.os.Build
 import android.os.IBinder
 import android.provider.Settings
 import android.util.Log
@@ -31,8 +31,8 @@ class ScanService : Service() {
         // Location check interval (ms)
         private const val CHECK_INTERVAL_MS = 10_000L
 
-        private val WIFI_API_KEY: String = BuildConfig.THINGSPEAK_WIFI_API_KEY
-        private val BT_API_KEY: String = BuildConfig.THINGSPEAK_BT_API_KEY
+        private const val WIFI_API_KEY: String = BuildConfig.THINGSPEAK_WIFI_API_KEY
+        private const val BT_API_KEY: String = BuildConfig.THINGSPEAK_BT_API_KEY
 
         private const val TAG = "ScanService"
         private const val CHANNEL_ID = "scan_channel"
@@ -59,7 +59,7 @@ class ScanService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        startForeground(1, buildNotification("Wi-Fi & BT scanner running"))
+        startForeground(1, buildNotification())
 
         // compute deviceId (Settings.Secure.ANDROID_ID)
         deviceId = fetchDeviceId()
@@ -83,6 +83,7 @@ class ScanService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    @SuppressLint("HardwareIds")
     private fun fetchDeviceId(): String {
         return try {
             val id = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
@@ -130,22 +131,22 @@ class ScanService : Service() {
             Log.d(TAG, "📍 performScan at ${location.latitude}, ${location.longitude}")
 
             // Post typed empty lists to indicate searching in UI
-            wifiLiveData.postValue(emptyList<WifiResult>())
-            btLiveData.postValue(emptyList<BluetoothResult>())
+            wifiLiveData.postValue(emptyList())
+            btLiveData.postValue(emptyList())
 
             // Run scans (safely)
             val rawWifi = try {
                 WifiScanner.scan(applicationContext, location)
             } catch (t: Throwable) {
                 Log.e(TAG, "WifiScanner.scan failed", t)
-                emptyList<WifiResult>()
+                emptyList()
             }
 
             val rawBt = try {
                 BluetoothScanner.scan(applicationContext, location)
             } catch (t: Throwable) {
                 Log.e(TAG, "BluetoothScanner.scan failed", t)
-                emptyList<BluetoothResult>()
+                emptyList()
             }
 
             // Filter
@@ -215,18 +216,16 @@ class ScanService : Service() {
 
     // Notification helpers
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val manager = getSystemService(NotificationManager::class.java)
-            val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_LOW)
-            channel.description = "Foreground service for scanning Wi-Fi and Bluetooth"
-            manager.createNotificationChannel(channel)
-        }
+        val manager = getSystemService(NotificationManager::class.java)
+        val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_LOW)
+        channel.description = "Foreground service for scanning Wi-Fi and Bluetooth"
+        manager.createNotificationChannel(channel)
     }
 
-    private fun buildNotification(contentText: String): Notification {
+    private fun buildNotification(): Notification {
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("WiFi+BT Scanner")
-            .setContentText(contentText)
+            .setContentText("Wi-Fi & BT scanner running")
             .setSmallIcon(android.R.drawable.ic_menu_search)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
