@@ -1,3 +1,4 @@
+
 # Wi-Fi & Bluetooth Scanner
 
 A foreground Android service that scans nearby **Wi-Fi SSIDs** and **Bluetooth devices**, filters out unwanted MAC addresses fetched from a remote API, displays results in real time, and sends each discovered device to **ThingSpeak** channels.
@@ -17,6 +18,7 @@ A foreground Android service that scans nearby **Wi-Fi SSIDs** and **Bluetooth d
 
 ---
 
+<a id="high-level-flow"></a>
 ## 🚀 High Level Flow
 
 1. **App starts** → `ScanService` runs as a foreground service.  
@@ -29,6 +31,7 @@ A foreground Android service that scans nearby **Wi-Fi SSIDs** and **Bluetooth d
 
 ---
 
+<a id="acceptance-criteria--features"></a>
 ## ✅ Acceptance Criteria / Features
 
 | Feature                                   | Status |
@@ -45,6 +48,7 @@ A foreground Android service that scans nearby **Wi-Fi SSIDs** and **Bluetooth d
 
 ---
 
+<a id="secrets-configuration-secretsproperties"></a>
 ## 🔐 Secrets Configuration (`secrets.properties`)
 
 Create a `secrets.properties` file in your **project root** (never commit it).
@@ -74,6 +78,8 @@ Add to `.gitignore`:
 
 ---
 
+<a id="filter-api-get--expected-format"></a>
+
 ## 🌐 Filter API (GET) — Expected Format
 
 **Request**
@@ -92,6 +98,8 @@ x-api-key: filter-api-key-value
 If unreachable → empty list used (no filtering).
 
 ---
+
+<a id="thingspeak-channels--setup"></a>
 
 ## 📡 ThingSpeak Channels — Setup
 
@@ -134,6 +142,8 @@ api_key=ABCDEFG1234567
 
 ---
 
+<a id="how-to-run--test"></a>
+
 ## ▶️ How to Run & Test
 
 1. **Create `secrets.properties`** (see above).
@@ -145,6 +155,8 @@ api_key=ABCDEFG1234567
 7. **Check ThingSpeak** for new entries.
 
 ---
+
+<a id="troubleshooting-tips"></a>
 
 ## 🧰 Troubleshooting Tips
 
@@ -159,6 +171,8 @@ api_key=ABCDEFG1234567
 
 ---
 
+<a id="future-improvements"></a>
+
 ## 🔮 Future Improvements
 
 * Cache filter list offline
@@ -168,6 +182,8 @@ api_key=ABCDEFG1234567
 * Add local database for history
 
 ---
+
+<a id="business-logic-diagram"></a>
 
 ## 🧭 Business Logic Diagram
 
@@ -203,9 +219,5 @@ Ensure compliance with local laws governing radio scanning.
 
 ---
 
-**Author:** ChatGPT (GPT-5) + *Mariusz* :-)
+**Author:** ChatGPT (GPT-5) + *Mariusz*
 **Last Updated:** 2025-11-05
-
-```
-
----
