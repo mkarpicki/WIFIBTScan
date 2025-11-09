@@ -15,6 +15,7 @@ interface BtThingSpeakApi {
         @Field("field3") rssi: Int,
         @Field("field4") timestamp: String,
         @Field("field5") latitude: Double,
-        @Field("field6") longitude: Double
+        @Field("field6") longitude: Double,
+        @Field("field7") deviceId: String
     ): Call<Void>
 }

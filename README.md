@@ -115,6 +115,7 @@ Create **two channels** on [ThingSpeak](https://thingspeak.com).
 | field4 | timestamp (ms since 1970) |
 | field5 | latitude                  |
 | field6 | longitude                 |
+| field7 | deviceId                  |
 
 ### Bluetooth Channel Fields
 
@@ -126,6 +127,7 @@ Create **two channels** on [ThingSpeak](https://thingspeak.com).
 | field4 | timestamp (ms since 1970) |
 | field5 | latitude                  |
 | field6 | longitude                 |
+| field7 | deviceId                  |
 
 ### Example POST (Wi-Fi)
 
@@ -138,6 +140,7 @@ api_key=ABCDEFG1234567
 &field4=1730498765123
 &field5=52.2301
 &field6=21.0109
+&field7=12345
 ```
 
 ---
