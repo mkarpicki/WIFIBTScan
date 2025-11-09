@@ -187,11 +187,15 @@ api_key=ABCDEFG1234567
 ## 🧭 Business Logic Diagram
 
 ```mermaid
+---
+config:
+      theme: redux
+---
 flowchart TD
-
-    A[App start] --> B[Load secrets.properties]
-    B --> C[Start ScanService (foreground)]
-    C --> D[GET filter list (x-api-key)]
+    A[App start] 
+    A --> B[Load secrets.properties]
+    B --> C["Start ScanService (foreground)"]
+    C --> D["GET filter list (x-api-key)"]
     D --> E{List loaded?}
     E -->|Yes| F[Start loop every 10 s]
     E -->|No| F[Start loop every 10 s]
@@ -199,15 +203,15 @@ flowchart TD
     G --> H{Moved ≥ 20 m?}
     H -->|No| F
     H -->|Yes| I[Perform scan]
-    I --> J[Clear UI → "Searching…"]
+    I --> J[Clear UI]
     J --> K[Scan Wi-Fi]
     J --> L[Scan Bluetooth]
-    K --> M1[Filter Wi-Fi (bssid)]
-    L --> M2[Filter BT (address)]
+    K --> M1["Filter Wi-Fi (bssid)"]
+    L --> M2["Filter BT (address)"]
     M1 --> N[Update UI]
     M2 --> N
-    N --> O[POST Wi-Fi → ThingSpeak (delay 1 s)]
-    N --> P[POST BT → ThingSpeak (delay 1 s)]
+    N --> O["POST Wi-Fi → ThingSpeak (delay 1 s)"]
+    N --> P["POST BT → ThingSpeak (delay 1 s)"]
     O --> Q[Wait next loop]
     P --> Q
     Q --> F
